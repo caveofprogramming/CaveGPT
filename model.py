@@ -35,7 +35,6 @@ class BatchLoader:
     
 class TokenEmbedding:
     def __init__(self, vocab_size, embed_dim):
-        # Divide weights by square root of embed_dim to keep constant magnitude of vector
         self.weight = torch.nn.Parameter(torch.randn(vocab_size, embed_dim) / embed_dim ** 0.5)
 
     def __call__(self, x):
@@ -46,7 +45,6 @@ class TokenEmbedding:
 
 class PositionalEmbedding:
     def __init__(self, context_length, embed_dim):
-        # Divide weights by square root of embed_dim to keep constant magnitude of vector
         self.weight = torch.nn.Parameter(torch.randn(context_length, embed_dim) / embed_dim ** 0.5)
 
     def parameters(self):
@@ -65,35 +63,16 @@ class AttentionHead:
         return [self.Wq, self.Wk, self.Wv]
 
     def __call__(self, x):
-        # x is a tensor where each row represents a character in a sequence
-        # of characters extracted from the text.
-        # Each character is represented as a vector of floats of embed_dim length.
-
-        # Imagine we only have one token. The output matrices below would only 
-        # contain one row. Each row is a different projection of the original
-        # token, representing different things.
-
         Q = x @ self.Wq # Q = query, what this token wants
         K = x @ self.Wk # K = key, what this token offers
         V = x @ self.Wv # V = value, what this token gives if someone attends to it
 
-        # This is computing a matrix where each row is the dot product
-        # of a row in Q with a row in K.
-        # So we're computing similarity scores between all possible 
-        # combinations of 2 rows.
-        # These grow in proportion to the square of the number of columns
-        # hence the normalising factor.
         scores = Q @ K.transpose(-2, -1) / (K.shape[-1] ** 0.5)
 
-        # Causal mask. A mask of 1s in the same shape as scores,
-        # except upper part above diagonal is zeros.
         mask = torch.tril(torch.ones(scores.shape))
 
-        # Apply mask. Replace all values in scores in same positions as 0
-        # in mask with -inf, so that softmax will ignore these values.
         scores = scores.masked_fill(mask == 0, float('-inf'))
 
-        # Apply softmax to each row (index -1)
         weights = torch.softmax(scores, dim=-1)
 
         # Finally apply V

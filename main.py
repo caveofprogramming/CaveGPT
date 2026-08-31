@@ -46,12 +46,10 @@ def train(model, loader, context_len, batch_size, steps, lr=3e-4):
         if step % 100 == 0:
             print(f"Step {step} loss {loss.item():.4f}")
 
-def generate(model, vocab, prompt, context_len, max_new_tokens=200):
-    # Encode the prompt
+def generate(model, vocab, prompt, context_len, max_new_tokens=50):
     prompt_ids = vocab.encode(prompt).tolist()
     ids = prompt_ids.copy()
 
-    # Generate continuation
     for _ in range(max_new_tokens):
         x = torch.tensor([ids[-context_len:]])
         logits = model(x)
@@ -60,11 +58,7 @@ def generate(model, vocab, prompt, context_len, max_new_tokens=200):
         next_id = torch.multinomial(probs, num_samples=1).item()
         ids.append(next_id)
 
-    # Remove the prompt from the output
-    generated_ids = ids[len(prompt_ids):]
-
-    # Decode only the continuation
-    return vocab.decode(torch.tensor(generated_ids))
+    return vocab.decode(torch.tensor(ids))
 
 
 def main():
@@ -114,9 +108,6 @@ def main():
         print("Saving weights...")
         model.save(weights_path)
 
-    # ---------------------------
-    # Interactive GPT-style loop
-    # ---------------------------
     print("Model ready. Enter text, or type 'quit' to exit.\n")
 
     while True:
