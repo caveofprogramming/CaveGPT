@@ -1,62 +1,37 @@
 import torch
 
 class Vocab:
-    def __init__(self, text):
-
-        # Sorted list of all characters in the text.
-        chars = sorted(set(text))
-
-        # Create a mapping from chars to integer IDs.
-        self.stoi = {c:i for i, c in enumerate(chars)}
-
-        # Create a mapping from the int ID back to the original char.
-        self.itos = {i:c for c, i in self.stoi.items()}
-
-        # How many unique chars do we have?
-        self.vocab_size = len(chars)
+    def __init__(self, sp):
+        self.sp = sp
+        self.vocab_size = sp.get_piece_size()
 
     def encode(self, text):
-        # Take some text and turn it into a vector of integer IDs,
-        # where each ID corresponds to a character.
-        return torch.tensor([self.stoi[c] for c in text])
-    
+        ids = self.sp.encode(text, out_type=int)
+        return torch.tensor(ids, dtype=torch.long)
+
     def decode(self, ids):
-        # Translate vector (tensor) of IDs to text.
-        # Tensor contains rank-0 scaler tensors, so
-        # i.item() gets the actual integer.
-        return ''.join(self.itos[i.item()] for i in ids)
+        return self.sp.decode(ids.tolist())
 
-class CharDataset:
+class TokenDataset:
     def __init__(self, text, vocab: Vocab):
-
-        # Store the vocab used to map characters to ints
         self.vocab = vocab
-
-        # Store the entire encoded text
         self.ids = vocab.encode(text)
 
 class BatchLoader:
-    def __init__(self, dataset: CharDataset):
-
-        # ids is the entire encoded text, as int IDs instead of characters
+    def __init__(self, dataset: TokenDataset):
         self.ids = dataset.ids
 
     def get_batch(self, context_length, batch_size):
-        ids = self.ids # entire encoded text
+        ids = self.ids
+        max_start = len(ids) - context_length - 1
 
-        # vector of random ints, of length batch_size.
-        # Maximum int is big enough that if we use it as an index into ids 
-        # (the encoded text), we can read context_length characters from that point
-        ix = torch.randint(len(ids) - context_length, (batch_size, ))
+        ix = torch.randint(0, max_start, (batch_size,))
 
-        # x consists of sequences of characters of context_length, 
-        # randomly selected using ix.
         x = torch.stack([ids[i : i + context_length] for i in ix])
-
-        # y contains same as corresponding x sequences, but shifted along 1 character
         y = torch.stack([ids[i + 1 : i + context_length + 1] for i in ix])
-        
+
         return x, y
+
     
 class TokenEmbedding:
     def __init__(self, vocab_size, embed_dim):

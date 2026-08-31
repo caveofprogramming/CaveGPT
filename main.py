@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 import re
 import string
+import sentencepiece as spm
 
 def save_weights(model, path="weights.pt"):
     torch.save(model.state_dict(), path)
@@ -18,38 +19,12 @@ def load_config(file):
 
 import string
 
-ALLOWED = set(string.ascii_letters + string.digits + string.punctuation + " \n\t")
+import pandas as pd
+import re
+def load_text(path):
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        return f.read()
 
-REPLACEMENTS = {
-    "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
-    "\u2013": "-", "\u2014": "-", "\u2212": "-",
-    "\u2026": "...",
-    "\u00a0": " ", 
-    "\r\n": "\n", "\r": "\n",
-}
-
-def clean_text(text: str) -> str:
-    for src, dst in REPLACEMENTS.items():
-        text = text.replace(src, dst)
-
-    text = "".join(ch if ch in ALLOWED else " " for ch in text)
-
-    while "  " in text:
-        text = text.replace("  ", " ")
-    while "\n\n\n" in text:
-        text = text.replace("\n\n\n", "\n\n")
-    return text
-
-def load_data(dir):
-    files = os.listdir(dir)
-    parts = []
-    for file in files:
-        path = os.path.join(dir, file)
-        if not os.path.isfile(path):
-            continue
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
-            parts.append(clean_text(f.read()))
-    return "".join(parts)
 
 def train(model, loader, context_len, batch_size, steps, lr=3e-4):
     params = model.parameters()
@@ -94,11 +69,21 @@ def generate(model, vocab, prompt, context_len, max_new_tokens=200):
 
 def main():
     config = load_config('config.json')
-    text = load_data(config['data_dir'])
+    text = load_text(config['data'])
+    vocab_size=config['vocab_size']
 
-    vocab = m.Vocab(text)
- 
-    dataset = m.CharDataset(text, vocab)
+    spm.SentencePieceTrainer.Train(
+        input=config['data'],
+        model_prefix='cave',
+        vocab_size=vocab_size,
+        model_type='bpe'
+    )
+
+    sp = spm.SentencePieceProcessor()
+    sp.load("cave.model")
+    
+    vocab = m.Vocab(sp)
+    dataset = m.TokenDataset(text, vocab)
     loader = m.BatchLoader(dataset)
 
     context_len = config['context_len']
@@ -107,7 +92,7 @@ def main():
     num_layers = config['num_layers']
 
     model = m.TransformerModel(
-        vocab_size=vocab.vocab_size,
+        vocab_size=vocab_size,
         context_len=context_len,
         embed_dim=embed_dim,
         num_heads=num_heads,

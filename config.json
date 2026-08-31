@@ -1,0 +1,12 @@
+{
+    "data": "../data/literature.txt",
+    "vocab_size": 8000,
+    "embed_dim": 128,
+    "context_len": 128,
+    "num_heads": 4,
+    "num_layers": 4,
+    "steps": 100000,
+    "learning_rate": 3e-4,
+    "batch_size": 64,
+    "max_new_tokens": 500
+}
