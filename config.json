@@ -8,5 +8,5 @@
     "steps": 100000,
     "learning_rate": 3e-4,
     "batch_size": 64,
-    "max_new_tokens": 500
+    "max_new_tokens": 100
 }

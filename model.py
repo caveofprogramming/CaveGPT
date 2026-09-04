@@ -1,3 +1,4 @@
+
 import torch
 
 class Vocab:
@@ -35,7 +36,8 @@ class BatchLoader:
     
 class TokenEmbedding:
     def __init__(self, vocab_size, embed_dim):
-        self.weight = torch.nn.Parameter(torch.randn(vocab_size, embed_dim) / embed_dim ** 0.5)
+        weight = torch.randn(vocab_size, embed_dim)
+        self.weight = torch.nn.Parameter(weight / embed_dim ** 0.5)
 
     def __call__(self, x):
         return self.weight[x]
@@ -45,7 +47,8 @@ class TokenEmbedding:
 
 class PositionalEmbedding:
     def __init__(self, context_length, embed_dim):
-        self.weight = torch.nn.Parameter(torch.randn(context_length, embed_dim) / embed_dim ** 0.5)
+        weight = torch.randn(context_length, embed_dim)
+        self.weight = torch.nn.Parameter(weight / embed_dim ** 0.5)
 
     def parameters(self):
         return [self.weight]
@@ -63,19 +66,15 @@ class AttentionHead:
         return [self.Wq, self.Wk, self.Wv]
 
     def __call__(self, x):
-        Q = x @ self.Wq # Q = query, what this token wants
-        K = x @ self.Wk # K = key, what this token offers
-        V = x @ self.Wv # V = value, what this token gives if someone attends to it
+        Q = x @ self.Wq # query
+        K = x @ self.Wk # key
+        V = x @ self.Wv # value
 
         scores = Q @ K.transpose(-2, -1) / (K.shape[-1] ** 0.5)
-
         mask = torch.tril(torch.ones(scores.shape))
-
         scores = scores.masked_fill(mask == 0, float('-inf'))
-
         weights = torch.softmax(scores, dim=-1)
 
-        # Finally apply V
         return weights @ V
 
 class MultiHeadAttention:
@@ -83,7 +82,8 @@ class MultiHeadAttention:
         assert embed_dim % num_heads == 0
         self.head_dim = embed_dim // num_heads
         self.heads = [AttentionHead(embed_dim, self.head_dim) for _ in range(num_heads)]
-        self.Wo = torch.nn.Parameter(torch.randn(embed_dim, embed_dim) / embed_dim ** 0.5)
+        weights = torch.randn(embed_dim, embed_dim)
+        self.Wo = torch.nn.Parameter(weights / embed_dim ** 0.5)
 
     def parameters(self):
         params = [self.Wo]
@@ -95,14 +95,15 @@ class MultiHeadAttention:
 
     def __call__(self, x):
         out = torch.cat([h(x) for h in self.heads], dim=-1)
-
         return out @ self.Wo
 
 class FeedForward:
     def __init__(self, embed_dim):
         hidden = 4 * embed_dim
-        self.W1 = torch.nn.Parameter(torch.randn(embed_dim, hidden) / embed_dim ** 0.5)
-        self.W2 = torch.nn.Parameter(torch.randn(hidden, embed_dim) / embed_dim ** 0.5)
+        w1 = torch.randn(embed_dim, hidden) / embed_dim ** 0.5
+        self.W1 = torch.nn.Parameter(w1)
+        w2 = torch.randn(hidden, embed_dim) / embed_dim ** 0.5
+        self.W2 = torch.nn.Parameter(w2)
 
     def parameters(self):
         return [self.W1, self.W2]
@@ -150,7 +151,8 @@ class TransformerModel:
         self.token_embed = TokenEmbedding(vocab_size, embed_dim)
         self.pos_embed = PositionalEmbedding(context_len, embed_dim)
         self.blocks = [TransformerBlock(embed_dim, num_heads) for _ in range(num_layers)]
-        self.Wout = torch.nn.Parameter(torch.randn(embed_dim, vocab_size) / embed_dim ** 0.5)
+        weightsOut = torch.randn(embed_dim, vocab_size) 
+        self.Wout = torch.nn.Parameter(weightsOut / embed_dim ** 0.5)
 
     def parameters(self):
         params = []
@@ -187,3 +189,8 @@ class TransformerModel:
 
         logits = h @ self.Wout
         return logits
+
+
+
+
+    

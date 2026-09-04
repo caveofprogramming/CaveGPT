@@ -3,9 +3,17 @@ import json
 import model as m
 import torch
 import torch.nn.functional as F
-import re
-import string
 import sentencepiece as spm
+import subprocess
+import platform
+import time
+
+import pandas as pd
+import re
+
+def clear():
+    command = "cls" if platform.system() == "Windows" else "clear"
+    subprocess.run(command, shell=True)
 
 def save_weights(model, path="weights.pt"):
     torch.save(model.state_dict(), path)
@@ -17,10 +25,7 @@ def load_config(file):
     with open(file, 'r') as f:
         return json.load(f)
 
-import string
 
-import pandas as pd
-import re
 def load_text(path):
     with open(path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
@@ -75,7 +80,7 @@ def main():
 
     sp = spm.SentencePieceProcessor()
     sp.load("cave.model")
-    
+
     vocab = m.Vocab(sp)
     dataset = m.TokenDataset(text, vocab)
     loader = m.BatchLoader(dataset)
@@ -118,5 +123,7 @@ def main():
         response = generate(model, vocab, prompt, context_len, max_new_tokens=config['max_new_tokens'])
         print("Model:", response)
         print()
+        input("")
+        clear()
 
 main()
